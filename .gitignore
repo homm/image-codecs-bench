@@ -1,0 +1,4 @@
+.docker_build
+
+/input/*.*
+/output
