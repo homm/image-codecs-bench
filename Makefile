@@ -8,4 +8,4 @@ TAG ?= latest
 build: .docker_build
 
 shell: build
-	docker run -it --rm -v ${PWD}:/opt image-codecs-bench:${TAG} sh
+	docker run --privileged -it --rm -v ${PWD}:/opt image-codecs-bench:${TAG}
