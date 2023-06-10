@@ -12,7 +12,7 @@ from PIL import Image
 
 INPUT = "./input"
 OUTPUT = "./output"
-PassResult = namedtuple('PassResult', 'infile fname size enc_time perf dssim')
+PassResult = namedtuple('PassResult', 'fname outname size enc_time perf dssim')
 
 
 def encode_libavif(infile, outfile, *, speed=None, quality=None):
@@ -45,8 +45,8 @@ def calc_dssim(infile, outfile):
 def test_libavif(infile, speed, quality):
     res = Image.open(infile).size
     fname, _ = os.path.splitext(os.path.basename(infile))
-    fname = f'{fname}.s{speed}.q{quality}'
-    outfile = f'{OUTPUT}/{fname}'
+    outname = f'{fname}.s{speed}.q{quality}'
+    outfile = f'{OUTPUT}/{outname}'
 
     enc_time, size = encode_libavif(
         infile, f'{outfile}.avif', speed=speed, quality=quality)
@@ -55,22 +55,22 @@ def test_libavif(infile, speed, quality):
     os.unlink(f'{outfile}.png')
 
     perf = res[0] * res[1] / enc_time / 1000 / 1000
-    return PassResult(infile, fname, size, enc_time, perf, dssim)
+    return PassResult(fname, outname, size, enc_time, perf, dssim)
 
 
-src_files = glob(f"{INPUT}/parrots.png")
+src_files = glob(f"{INPUT}/down.png")
 
 
 with open('libavif.csv', 'w', newline='') as csvfp:
     csvwriter = csv.writer(csvfp)
-    csvwriter.writerow("fname speed quality size enc_time perf dssim".split())
+    csvwriter.writerow("fname speed quality outname size enc_time perf dssim".split())
     for infile in src_files:
         for quality in range(10, 45, 2):
             speed = 4
             for speed in range(1, 10):
                 res = test_libavif(infile, speed, quality)
-                csvwriter.writerow(res[1:2] + (speed, quality) + res[2:])
+                csvwriter.writerow(res[0:1] + (speed, quality) + res[1:])
                 csvfp.flush()
-                print('>>> {fname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
+                print('>>> {outname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
             print()
 

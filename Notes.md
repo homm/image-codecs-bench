@@ -27,10 +27,25 @@ Usually size grow about 1%, very moderate DSSIM drop.
 ### Speed 5 comparing to 1
 
 DSSIM is quite stable, almost to cases with drop more than 0.01.
-Size difference from 2% to -0.5%. Also noticed signifficant inconsistency
-in coding performance for different quality settings. For example,
+Size difference from 2% to -0.5%. Also noticed significant inconsistency
+in coding performance for different q settings. For example,
 giving s=5, the performance better 2.36 times for compression with q=44,
 than for q=10. For s=1, the same ratio is 3.4x.
 
-Speed 5 is recomended for offline compression. All levels below that don't make sense.
+Speed 5 is recommended for offline compression. All levels below that don't make sense.
 
+
+### Speed 7 vs 6
+
+This and next levels have problems with picture quality: missing parts
+on high q on artworks, pixilation in gradients on photos. As a result,
+can be even more compact.
+
+### Speed 8 vs 7
+
+Has significant drop in quality and compression level. Not recommended.
+
+### Speed 9 vs 8
+
+Dramatically larger file size for artworks even with worse DSSIM.
+Not recommended at all.
