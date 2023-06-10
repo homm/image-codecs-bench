@@ -32,14 +32,14 @@ in coding performance for different q settings. For example,
 giving s=5, the performance better 2.36 times for compression with q=44,
 than for q=10. For s=1, the same ratio is 3.4x.
 
-Speed 5 is recommended for offline compression. All levels below that don't make sense.
+**Speed 5 is recommended for offline compression.** All levels below that don't make sense.
 
 
 ### Speed 7 vs 6
 
 This and next levels have problems with picture quality: missing parts
 on high q on artworks, pixilation in gradients on photos. As a result,
-can be even more compact.
+can be even more compact. To compensate this, real q could be tuned for s >= 7.
 
 ### Speed 8 vs 7
 

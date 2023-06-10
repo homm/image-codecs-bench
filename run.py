@@ -20,6 +20,9 @@ def encode_libavif(infile, outfile, *, speed=None, quality=None):
     if speed is not None:
         assert 0 <= speed <= 10
         cmd.extend(['--speed', str(speed)])
+        if speed >= 7 and quality is not None:
+            quality -= 2
+
     if quality is not None:
         assert 0 <= quality <= 63
         cmd.extend(['--min', str(quality)])
@@ -38,7 +41,8 @@ def decode_libavif(infile, outfile):
 
 
 def calc_dssim(infile, outfile):
-    dssim = subprocess.check_output(["dssim", infile, outfile])
+    cmd = ["dssim", infile, outfile]
+    dssim = subprocess.check_output(cmd, env={'RAYON_NUM_THREADS': '1'})
     return float(dssim.partition(b'\t')[0]) * 100
 
 
@@ -58,7 +62,8 @@ def test_libavif(infile, speed, quality):
     return PassResult(fname, outname, size, enc_time, perf, dssim)
 
 
-src_files = glob(f"{INPUT}/down.png")
+src_files = glob(f"{INPUT}/*.png")
+# src_files = [f"{INPUT}/parrots.png", f"{INPUT}/down.png"]
 
 
 with open('libavif.csv', 'w', newline='') as csvfp:
@@ -67,7 +72,7 @@ with open('libavif.csv', 'w', newline='') as csvfp:
     for infile in src_files:
         for quality in range(10, 45, 2):
             speed = 4
-            for speed in range(1, 10):
+            for speed in range(5, 10):
                 res = test_libavif(infile, speed, quality)
                 csvwriter.writerow(res[0:1] + (speed, quality) + res[1:])
                 csvfp.flush()
