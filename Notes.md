@@ -35,6 +35,12 @@ than for q=10. For s=1, the same ratio is 3.4x.
 **Speed 5 is recommended for offline compression.** All levels below that don't make sense.
 
 
+### Spped 6 vs 5
+
+3x faster, constant but not significant size enlargement.
+
+**Speed 6 is recommended for online compression.** All levels above have quality problems.
+
 ### Speed 7 vs 6
 
 This and next levels have problems with picture quality: missing parts
