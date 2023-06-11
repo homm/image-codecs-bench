@@ -10,10 +10,12 @@ from tempfile import NamedTemporaryFile
 
 from PIL import Image
 
+from tools.bisect import bisect_function
+
 
 INPUT = "./input"
 OUTPUT = "./output"
-PassResult = namedtuple('PassResult', 'fname outname size enc_time perf dssim')
+PassResult = namedtuple('PassResult', 'fname codec outname size enc_time perf dssim')
 
 
 def encode_libavif(infile, outfile, *, speed=None, quality=None):
@@ -68,62 +70,61 @@ def test_libavif(infile, speed, quality):
     res = Image.open(infile).size
     fname, _ = os.path.splitext(os.path.basename(infile))
     outname = f'{fname}.s{speed}.q{quality}'
-    outfile = f'{OUTPUT}/{outname}'
+    outfile = f'{OUTPUT}/{outname}.avif'
 
     enc_time, size = encode_libavif(
-        infile, f'{outfile}.avif', speed=speed, quality=quality)
-    decode_libavif(f'{outfile}.avif', f'{outfile}.png')
-    dssim = calc_dssim(infile, f'{outfile}.png')
-    os.unlink(f'{outfile}.png')
+        infile, outfile, speed=speed, quality=quality)
+    with NamedTemporaryFile(suffix='.png') as temp_png:
+        decode_libavif(outfile, temp_png.name)
+        dssim = calc_dssim(infile, temp_png.name)
 
     perf = res[0] * res[1] / enc_time / 1000 / 1000
-    return PassResult(fname, outname, size, enc_time, perf, dssim)
+    return PassResult(fname, 'libavif', outname, size, enc_time, perf, dssim)
+
+
+test_webp_func_cache = {}
+
+def test_webp_func(infile):
+    res = Image.open(infile).size
+    fname, _ = os.path.splitext(os.path.basename(infile))
+    cache = test_webp_func_cache
+
+    def webp_test(quality):
+        if quality.is_integer():
+            quality = round(quality)
+        key = (infile, quality)
+        if key not in cache:
+            outname = f'{fname}.q{quality}'
+            outfile = f'{OUTPUT}/{outname}.webp'
+            enc_time, size = encode_webp(infile, outfile, quality=quality)
+            with NamedTemporaryFile(suffix='.png') as temp_png:
+                decode_webp(outfile, temp_png.name)
+                dssim = calc_dssim(infile, temp_png.name)
+            perf = res[0] * res[1] / enc_time / 1000 / 1000
+            cache[key] = PassResult(fname, 'webp', outname, size, enc_time, perf, dssim)
+        return cache[key]
+    return webp_test
 
 
 src_files = glob(f"{INPUT}/*.png")
-src_files = [f"{INPUT}/mars.png"]
-
-
-from tools.bisect import bisect_function
-
-
-def webp_size(quality):
-    outfile = f'./parrots.q{quality}.webp'
-    enc_time, size = encode_webp(f"{INPUT}/parrots.png", outfile, quality=quality)
-    return size
-
-
-def webp_dssim(quality):
-    if quality.is_integer():
-        quality = round(quality)
-    infile = f"{INPUT}/parrots.png"
-    outfile = f'./parrots.q{quality}.webp'
-    enc_time, size = encode_webp(infile, outfile, quality=quality)
-    with NamedTemporaryFile(suffix='.png') as temp_png:
-        decode_webp(outfile, temp_png.name)
-        dssim = calc_dssim(infile, temp_png.name)
-    return dssim
-
-
-error = 0
-for target in [0.048, 0.059, 0.071, 0.084, 0.097, 0.112, 0.126, 0.144, 0.177, 0.210, 0.246, 0.306, 0.360, 0.434, 0.517, 0.605, 0.712, 0.832]:
-    val, q = bisect_function(webp_dssim, 0, 100, target, step=0.5, delta=0, invert=True)
-    error += abs(target - val) / target
-    print('>>>', val, q, abs(target - val) / target)
-
-raise ValueError(f'{error=}')
+# src_files = [f"{INPUT}/mars.png"]
 
 
 with open('libavif.csv', 'w', newline='') as csvfp:
     csvwriter = csv.writer(csvfp)
-    csvwriter.writerow("fname speed quality outname size enc_time perf dssim".split())
+    csvwriter.writerow("fname codec effort quality outname size enc_time perf dssim".split())
     for infile in src_files:
         for quality in range(10, 45, 2):
-            speed = 4
-            for speed in range(5, 10):
+            for speed in (5, 7):
                 res = test_libavif(infile, speed, quality)
-                csvwriter.writerow(res[0:1] + (speed, quality) + res[1:])
-                csvfp.flush()
+                csvwriter.writerow(res[0:2] + (speed, quality) + res[2:])
                 print('>>> {outname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
+
+                res, q = bisect_function(
+                    test_webp_func(infile), 0, 100, res.dssim, step=0.5,
+                    invert=True, key=lambda x: x.dssim)
+                csvwriter.writerow(res[0:2] + (speed, quality) + res[2:])
+                print('>>> {outname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
+                csvfp.flush()
             print()
 

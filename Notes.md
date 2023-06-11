@@ -32,14 +32,15 @@ in coding performance for different q settings. For example,
 giving s=5, the performance better 2.36 times for compression with q=44,
 than for q=10. For s=1, the same ratio is 3.4x.
 
-**Speed 5 is recommended for offline compression.** All levels below that don't make sense.
+**Speed 5 is recommended for offline compression.**
+All lower levels that don't make sense.
 
 
 ### Spped 6 vs 5
 
 3x faster, constant but not significant size enlargement.
 
-**Speed 6 is recommended for online compression.** All levels above have quality problems.
+**Speed 6 is recommended for online compression.**
 
 ### Speed 7 vs 6
 
@@ -47,9 +48,14 @@ This and next levels have problems with picture quality: missing parts
 on high q on artworks, pixilation in gradients on photos. As a result,
 can be even more compact. To compensate this, real q could be tuned for s >= 7.
 
+**Speed 6 is limited recommended for online compression.**
+All higher levels have more significant issues.
+
 ### Speed 8 vs 7
 
-Has significant drop in quality and compression level. Not recommended.
+Has significant drop in quality and compression level.
+Noticeable artifacts which can't be compensated by higher bitrate.
+Not recommended.
 
 ### Speed 9 vs 8
 
