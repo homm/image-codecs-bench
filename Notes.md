@@ -26,7 +26,7 @@ Usually size grow about 1%, very moderate DSSIM drop.
 
 ### Speed 5 comparing to 1
 
-DSSIM is quite stable, almost to cases with drop more than 0.01.
+DSSIM is quite stable, almost no cases with drop more than 0.01.
 Size difference from 2% to -0.5%. Also noticed significant inconsistency
 in coding performance for different q settings. For example,
 giving s=5, the performance better 2.36 times for compression with q=44,
@@ -36,9 +36,9 @@ than for q=10. For s=1, the same ratio is 3.4x.
 All lower levels that don't make sense.
 
 
-### Spped 6 vs 5
+### Speed 6 vs 5
 
-3x faster, constant but not significant size enlargement.
+3x-4x faster, constant but not significant size enlargement.
 
 **Speed 6 is recommended for online compression.**
 
