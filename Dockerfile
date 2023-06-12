@@ -29,4 +29,7 @@ RUN apk add perf htop
 
 COPY --from=ssimulacra2 /opt/build/ssimulacra2 /usr/bin/ssimulacra2
 
+ADD requirements.txt .
+RUN pip install -r requirements.txt
+
 CMD echo 0 > /proc/sys/kernel/kptr_restrict && $0
