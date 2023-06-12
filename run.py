@@ -61,9 +61,9 @@ def decode_webp(infile, outfile):
 
 
 def calc_dssim(infile, outfile):
-    cmd = ["dssim", infile, outfile]
+    cmd = ["ssimulacra2", infile, outfile]
     dssim = subprocess.check_output(cmd, env={'RAYON_NUM_THREADS': '1'})
-    return float(dssim.partition(b'\t')[0]) * 100
+    return float(dssim.partition(b'\t')[0])
 
 
 def test_libavif(infile, speed, quality):
@@ -115,16 +115,17 @@ with open('libavif.csv', 'w', newline='') as csvfp:
     csvwriter.writerow("fname codec effort quality outname size enc_time perf dssim".split())
     for infile in src_files:
         for quality in range(10, 45, 2):
-            for speed in (5, 7):
+            for speed in range(5, 9):
                 res = test_libavif(infile, speed, quality)
                 csvwriter.writerow(res[0:2] + (speed, quality) + res[2:])
                 print('>>> {outname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
 
-                res, q = bisect_function(
-                    test_webp_func(infile), 0, 100, res.dssim, step=0.5,
-                    invert=True, key=lambda x: x.dssim)
-                csvwriter.writerow(res[0:2] + (speed, quality) + res[2:])
-                print('>>> {outname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
+                if speed in (5, 7):
+                    res, q = bisect_function(
+                        test_webp_func(infile), 0, 100, res.dssim, step=0.5,
+                        invert=False, key=lambda x: x.dssim)
+                    csvwriter.writerow(res[0:2] + (speed, quality) + res[2:])
+                    print('>>> {outname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
                 csvfp.flush()
             print()
 
