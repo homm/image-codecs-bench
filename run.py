@@ -11,6 +11,7 @@ from tempfile import NamedTemporaryFile
 from PIL import Image
 
 from tools.bisect import bisect_function
+from tools.pool import enrich_result, iterate_futures, pool
 
 
 INPUT = "./input"
@@ -114,29 +115,56 @@ def test_webp_func(infile):
     return webp_test
 
 
+@iterate_futures
+def iterate_avif(src_files):
+    for infile in src_files:
+        for quality in range(12, 45, 4):
+            for speed in range(5, 9):
+                for ss in (0, 1, 2):
+                    yield pool.submit(
+                        enrich_result(test_libavif, (infile, quality, speed, ss)),
+                        infile, speed, quality, ss
+                    )
+
+
+@iterate_futures
+def compare_webp(it, compare_speeds):
+    for ctx, res in it:
+        yield ctx, res
+
+        infile, quality, speed, *_ = ctx
+        if speed in compare_speeds:
+            yield pool.submit(
+                enrich_result(bisect_function, (infile, quality, speed)),
+                test_webp_func(infile), 0, 100, res.dssim, step=0.5,
+                invert=False, key=lambda x: x.dssim
+            )
+
+
 src_files = glob(f"{INPUT}/*.png")
 # src_files = [f"{INPUT}/mars.png"]
 
 
-with open('./datasets/libavif.ss1.csv', 'w', newline='') as csvfp:
+with open('./datasets/libavif.tmp.csv', 'w', newline='') as csvfp:
     csvwriter = csv.writer(csvfp)
     csvwriter.writerow("fname codec effort quality outname size enc_time perf dssim".split())
-    for infile in src_files:
-        print('===' * 8)
-        print(infile)
-        print('===' * 8)
-        for quality in range(10, 45, 2):
-            for speed in range(5, 9):
-                res = test_libavif(infile, speed, quality, 1)
-                csvwriter.writerow(res[0:2] + (speed, quality) + res[2:])
-                print('>>> {outname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
 
-                if speed in (5, 7):
-                    res, q = bisect_function(
-                        test_webp_func(infile), 0, 100, res.dssim, step=0.5,
-                        invert=False, key=lambda x: x.dssim)
-                    csvwriter.writerow(res[0:2] + (speed, quality) + res[2:])
-                    print('>>> {outname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
-                csvfp.flush()
+    it = iterate_avif(src_files)
+    it = compare_webp(it, (5, 7))
+    
+    last_ctx = [None] * 4
+    for ctx, res, *_ in it:
+        infile, quality, speed, *_ = ctx
+
+        if infile != last_ctx[0]:
+            print('===' * 5)
+            print(infile)
+            print('===' * 5)
+
+        if quality != last_ctx[1]:
             print()
 
+        csvwriter.writerow(res[0:2] + (speed, quality) + res[2:])
+        csvfp.flush()
+        print('>>> {outname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
+        last_ctx = ctx
