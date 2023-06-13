@@ -18,7 +18,10 @@ OUTPUT = "./output"
 PassResult = namedtuple('PassResult', 'fname codec outname size enc_time perf dssim')
 
 
-def encode_libavif(infile, outfile, *, speed=None, quality=None):
+def encode_libavif(infile, outfile, *,
+                   speed=None, quality=None, subsampling=None):
+    os.makedirs(os.path.dirname(outfile), exist_ok=True)
+
     cmd = ["avifenc", infile, outfile]
     if speed is not None:
         assert 0 <= speed <= 10
@@ -32,7 +35,11 @@ def encode_libavif(infile, outfile, *, speed=None, quality=None):
         cmd.extend(['--max', str(quality)])
         cmd.extend(['--minalpha', str(quality // 2)])
         cmd.extend(['--maxalpha', str(quality // 2)])
-    # print('$', " ".join(cmd))
+
+    if subsampling is not None:
+        assert 0 <= subsampling <= 2
+        cmd.extend(['--yuv', ['444', '422', '420'][subsampling]])
+
     start = time.time()
     avifenc = subprocess.check_output(cmd).decode()
     return time.time() - start, os.stat(outfile).st_size
@@ -44,8 +51,9 @@ def decode_libavif(infile, outfile):
 
 
 def encode_webp(infile, outfile, *, quality=None):
-    cmd = ["cwebp", infile, '-o', outfile]
+    os.makedirs(os.path.dirname(outfile), exist_ok=True)
 
+    cmd = ["cwebp", infile, '-o', outfile]
     if quality is not None:
         assert 0 <= quality <= 100
         cmd.extend(['-q', str(quality)])
@@ -66,14 +74,14 @@ def calc_dssim(infile, outfile):
     return float(dssim.partition(b'\t')[0])
 
 
-def test_libavif(infile, speed, quality):
+def test_libavif(infile, speed, quality, subsampling):
     res = Image.open(infile).size
     fname, _ = os.path.splitext(os.path.basename(infile))
-    outname = f'{fname}.s{speed}.q{quality}'
-    outfile = f'{OUTPUT}/{outname}.avif'
+    outname = f's{speed}.q{quality}.ss{subsampling}.avif'
+    outfile = f'{OUTPUT}/{fname}/{outname}'
 
     enc_time, size = encode_libavif(
-        infile, outfile, speed=speed, quality=quality)
+        infile, outfile, speed=speed, quality=quality, subsampling=subsampling)
     with NamedTemporaryFile(suffix='.png') as temp_png:
         decode_libavif(outfile, temp_png.name)
         dssim = calc_dssim(infile, temp_png.name)
@@ -94,8 +102,8 @@ def test_webp_func(infile):
             quality = round(quality)
         key = (infile, quality)
         if key not in cache:
-            outname = f'{fname}.q{quality}'
-            outfile = f'{OUTPUT}/{outname}.webp'
+            outname = f'q{quality}.webp'
+            outfile = f'{OUTPUT}/{fname}/{outname}'
             enc_time, size = encode_webp(infile, outfile, quality=quality)
             with NamedTemporaryFile(suffix='.png') as temp_png:
                 decode_webp(outfile, temp_png.name)
@@ -110,13 +118,16 @@ src_files = glob(f"{INPUT}/*.png")
 # src_files = [f"{INPUT}/mars.png"]
 
 
-with open('libavif.csv', 'w', newline='') as csvfp:
+with open('libavif.ss1.csv', 'w', newline='') as csvfp:
     csvwriter = csv.writer(csvfp)
     csvwriter.writerow("fname codec effort quality outname size enc_time perf dssim".split())
     for infile in src_files:
+        print('===' * 8)
+        print(infile)
+        print('===' * 8)
         for quality in range(10, 45, 2):
             for speed in range(5, 9):
-                res = test_libavif(infile, speed, quality)
+                res = test_libavif(infile, speed, quality, 1)
                 csvwriter.writerow(res[0:2] + (speed, quality) + res[2:])
                 print('>>> {outname:18} {size:7} {enc_time:6.3f}s {perf:5.2f}Mps {dssim:7.3f}'.format(**res._asdict()))
 
