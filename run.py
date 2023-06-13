@@ -118,7 +118,7 @@ src_files = glob(f"{INPUT}/*.png")
 # src_files = [f"{INPUT}/mars.png"]
 
 
-with open('libavif.ss1.csv', 'w', newline='') as csvfp:
+with open('./datasets/libavif.ss1.csv', 'w', newline='') as csvfp:
     csvwriter = csv.writer(csvfp)
     csvwriter.writerow("fname codec effort quality outname size enc_time perf dssim".split())
     for infile in src_files:
