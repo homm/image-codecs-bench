@@ -5,8 +5,8 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from itertools import islice
 
 
-CONCURRENCY = 5
-QUEUE_SIZE = CONCURRENCY * 2
+CONCURRENCY = 6
+QUEUE_SIZE = CONCURRENCY * 5
 
 
 pool = ThreadPoolExecutor(CONCURRENCY)

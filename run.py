@@ -5,6 +5,7 @@ import os.path
 import subprocess
 import time
 from collections import namedtuple
+from concurrent.futures import Future
 from glob import glob
 from tempfile import NamedTemporaryFile
 
@@ -103,6 +104,7 @@ def test_webp_func(infile):
             quality = round(quality)
         key = (infile, quality)
         if key not in cache:
+            future = cache[key] = Future()
             outname = f'q{quality}.webp'
             outfile = f'{OUTPUT}/{fname}/{outname}'
             enc_time, size = encode_webp(infile, outfile, quality=quality)
@@ -110,47 +112,49 @@ def test_webp_func(infile):
                 decode_webp(outfile, temp_png.name)
                 dssim = calc_dssim(infile, temp_png.name)
             perf = res[0] * res[1] / enc_time / 1000 / 1000
-            cache[key] = PassResult(fname, 'webp', outname, size, enc_time, perf, dssim)
-        return cache[key]
+            future.set_result(
+                PassResult(fname, 'webp', outname, size, enc_time, perf, dssim))
+        return cache[key].result()
     return webp_test
 
 
 @iterate_futures
-def iterate_avif(src_files):
+def iterate_avif(src_files, *, quality, speed, subsampling=(0,)):
     for infile in src_files:
-        for quality in range(12, 45, 4):
-            for speed in range(5, 9):
-                for ss in (0, 1, 2):
+        for q in quality:
+            for s in speed:
+                for ss in subsampling:
                     yield pool.submit(
-                        enrich_result(test_libavif, (infile, quality, speed, ss)),
-                        infile, speed, quality, ss
+                        enrich_result(test_libavif, (infile, q, s, ss)),
+                        infile, s, q, ss
                     )
 
 
 @iterate_futures
-def compare_webp(it, compare_speeds):
+def compare_webp(it):
     for ctx, res in it:
         yield ctx, res
 
-        infile, quality, speed, *_ = ctx
-        if speed in compare_speeds:
-            yield pool.submit(
-                enrich_result(bisect_function, (infile, quality, speed)),
-                test_webp_func(infile), 0, 100, res.dssim, step=0.5,
-                invert=False, key=lambda x: x.dssim
-            )
+        yield pool.submit(
+            enrich_result(bisect_function, ctx),
+            test_webp_func(ctx[0]), 0, 100, res.dssim, step=0.5,
+            invert=False, key=lambda x: x.dssim
+        )
 
 
 src_files = glob(f"{INPUT}/*.png")
 # src_files = [f"{INPUT}/mars.png"]
 
 
-with open('./datasets/libavif.tmp.csv', 'w', newline='') as csvfp:
+with open('./datasets/libavif.compare_webp.csv', 'w', newline='') as csvfp:
     csvwriter = csv.writer(csvfp)
     csvwriter.writerow("fname codec effort quality outname size enc_time perf dssim".split())
 
-    it = iterate_avif(src_files)
-    it = compare_webp(it, (5, 7))
+    it = iterate_avif(
+        src_files,
+        quality=range(12, 45, 4),
+        speed=(5, 6, 7))
+    it = compare_webp(it)
     
     last_ctx = [None] * 4
     for ctx, res, *_ in it:
