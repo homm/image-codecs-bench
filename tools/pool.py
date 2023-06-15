@@ -6,7 +6,7 @@ from itertools import islice
 
 
 CONCURRENCY = 6
-QUEUE_SIZE = CONCURRENCY * 5
+QUEUE_SIZE = CONCURRENCY * 3
 
 
 pool = ThreadPoolExecutor(CONCURRENCY)

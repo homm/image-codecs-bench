@@ -152,7 +152,7 @@ with open('./datasets/libavif.compare_webp.csv', 'w', newline='') as csvfp:
 
     it = iterate_avif(
         src_files,
-        quality=range(12, 45, 4),
+        quality=range(8, 45, 4),
         speed=(5, 6, 7))
     it = compare_webp(it)
     

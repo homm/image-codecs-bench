@@ -1,11 +1,13 @@
-# Codecs overview
+# AOM v3.6.1 overview
 
-## libavif (AOM)
 
-### qmax-qmin
+## qmax-qmin
 
 Compression is always done with q = (qmax + qmin)/2.
 So q=10-34 is euivalent of q=22-22.
+
+
+## Compare speeds
 
 ### Speed 0
 
@@ -35,7 +37,6 @@ than for q=10. For s=1, the same ratio is 3.4x.
 **Speed 5 is recommended for offline compression.**
 All lower levels that don't make sense.
 
-
 ### Speed 6 vs 5
 
 3x-4x faster, constant but not significant size enlargement.
@@ -61,3 +62,31 @@ Not recommended.
 
 Dramatically larger file size for artworks even with worse DSSIM.
 Not recommended at all.
+
+
+## Compare with webp
+
+
+## Compare with AOM v3.2.0
+
+We've been using libheif with AOM v3.2.0 on speed=8 for a while.
+
+### Quality
+
+Looks like all defects are appears on the same levels,
+so it is fair to compare performance on the same speed levels.
+
+### Performance
+
+On the same CPU:
+
+|               |   s8 |   s7 |   s6 |
+| ---           | ---: | ---: | ---: |
+| mars   v3.2.0 | 3.72 | 2.25 | 1.32 |
+| mars   v3.6.1 | 5.03 | 3.06 | 1.69 |
+| louvre v3.2.0 | 3.56 | 2.07 | 1.08 |
+| louvre v3.6.1 | 4.91 | 2.77 | 1.51 |
+
+Conclusion:
+
+v3.6.1 is faster about 35%  on every speed.
